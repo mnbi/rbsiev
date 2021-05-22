@@ -1,3 +1,51 @@
 #!/usr/bin/env ruby
 
 require "rbsiev"
+
+def usage
+  puts <<HELP
+usage:
+    rbsiev [option] [FILE]
+option:
+    -d, --debug   : specify to run in verbose mode
+    -v, --version : print version
+    -h, --help    : show this message
+HELP
+end
+
+def print_version
+  ver = Rbsiev::VERSION
+  rel = Rbsiev::RELEASE
+  puts "(rbsiev :version #{ver} :release #{rel})"
+end
+
+opts = {}
+
+while ARGV.size > 0
+  arg = ARGV.shift
+  case arg
+  when "-d", "--debug"
+    opts[:verbose] = true
+  when "-v", "--version"
+    print_version
+    exit 0
+  when "-h", "--help"
+    usage
+    exit 0
+  else
+    opts[:files] ||= []
+    opts[:files] << arg
+  end
+end
+
+begin
+  if opts[:files]
+    Rbsiev.run(**opts)
+  else
+    opts[:prompt] = opts[:verbose] ? "rbsiev[#{Rbsiev::VERSION}]> " : "rbsiev> "
+    Rbsiev::Repl.start(**opts)
+  end
+rescue Rbsiev::Error => e
+  puts e.message
+  exit 1
+end

@@ -4,7 +4,7 @@ module Rbsiev
   class Evaluator
 
     def self.version
-      "(sicp-evaluator :version #{VERSION} :release #{RELEASE})"
+      "(rbsiev.evaluator :version #{VERSION} :release #{RELEASE})"
     end
 
     def initialize

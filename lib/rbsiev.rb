@@ -43,7 +43,11 @@ module Rbsiev
     end
 
     def version
-      Evaluator.version
+      comp_vers = []
+      comp_vers << Rbscmlex::Lexer.version
+      comp_vers << "(#{Rubasteme::Parser.version})"
+      comp_vers << Evaluator.version
+      comp_vers.join("\n")
     end
   }
 

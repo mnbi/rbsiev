@@ -97,7 +97,7 @@ module Rbsiev
     def eval_self_evaluating(ast_node, _)
       if ast_node.type == :ast_number and /([^\/]+)\/([^\/]+)/ === ast_node.literal
         md = Regexp.last_match
-        Kernel.eval("Rational(md[1], md[2])")
+        Kernel.eval("Rational(#{md[1]}, #{md[2]})")
       else
         Kernel.eval(ast_node.literal)
       end

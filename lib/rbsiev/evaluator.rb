@@ -148,8 +148,71 @@ module Rbsiev
       ast_node.each.to_a
     end
 
+    def last_node?(seq)
+      rest = rest_node(seq)
+      rest && rest.empty?
+    end
+
+    def first_node(seq)
+      seq[0]
+    end
+
+    def rest_node(seq)
+      seq[1..-1]
+    end
+
+    def sequence_to_node(seq)
+      if seq.empty?
+        EMPTY_LIST
+      elsif last_node?(seq)
+        first_node(seq)
+      else
+        make_begin(seq)
+      end
+    end
+
+    def make_begin(seq)
+      node = Rubasteme::AST.instantiate(:ast_begin, nil)
+      seq.each{|e| node << e}
+      node
+    end
+
     def cond_to_if(ast_node)
-      "not implemented yet"
+      expand_clauses(ast_node.cond_clauses)
+    end
+
+    def expand_clauses(clauses)
+      if clauses.empty?
+        SCM_FALSE
+      else
+        first = clauses[0]
+        rest = clauses[1..-1]
+        if cond_else_clause(first)
+          if rest.empty?
+            sequence_to_node(first.sequence)
+          else
+            raise Error,
+                  "ELSE clause isn't last -- COND_TO_IF: got=%s" % clauses
+          end
+        else
+          make_if(first.test,
+                  sequence_to_node(first.sequence),
+                  expand_clauses(rest))
+        end
+      end
+    end
+
+    def cond_else_clause(clause_node)
+      test = clause_node.test
+      test.type == :ast_identifier && identifier(test) == "else"
+    end
+
+    def make_if(predicate, consequent, alternative)
+      node = Rubasteme::AST.instantiate(:ast_conditional, nil)
+      node.test = predicate
+      node.consequent = consequent
+      node.alternate = alternative if alternative
+      node
     end
 
     def list_of_values(ast_nodes, env)

@@ -2,6 +2,8 @@
 
 require "rbscmlex"
 require "rubasteme"
+require_relative "rubasteme/ast/missing"
+require_relative "rubasteme/ast/misc"
 
 module Rbsiev
   require_relative "rbsiev/version"

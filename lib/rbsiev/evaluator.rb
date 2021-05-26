@@ -2,6 +2,7 @@
 
 module Rbsiev
   class Evaluator
+    include Rubasteme::AST::Misc
 
     def self.version
       "(rbsiev.evaluator :version #{VERSION} :release #{RELEASE})"
@@ -45,6 +46,12 @@ module Rbsiev
         eval_sequence(begin_action(ast_node), env)
       when *EV_COND
         eval_if(cond_to_if(ast_node), env)
+      when :ast_let
+        eval_let(ast_node, env)
+      when :ast_let_star
+        nested_lets = let_star_to_nested_lets(ast_node.bindings,
+                                              ast_node.body)
+        self.eval(nested_lets, env)
       when *EV_APPLICATION
         apply(self.eval(ast_node.operator, env),
               list_of_values(ast_node.operands, env))
@@ -76,12 +83,6 @@ module Rbsiev
     EV_BEGIN           = [:ast_begin]
     EV_COND            = [:ast_cond]
     EV_APPLICATION     = [:ast_procedure_call]
-
-    def identifier(ast_node)
-      if ast_node.type == :ast_identifier
-        ast_node.literal
-      end
-    end
 
     def eval_boolean(ast_node, _)
       case ast_node.literal
@@ -139,80 +140,21 @@ module Rbsiev
       value = nil
       if ast_nodes.instance_of?(Array) && ast_nodes.size > 0
         value = self.eval(ast_nodes[0], env)
-        eval_sequence(ast_nodes[1..-1], env) if ast_nodes.size > 1
+        value = eval_sequence(ast_nodes[1..-1], env) if ast_nodes.size > 1
       end
       value
     end
 
-    def begin_action(ast_node)
-      ast_node.each.to_a
-    end
-
-    def last_node?(seq)
-      rest = rest_node(seq)
-      rest && rest.empty?
-    end
-
-    def first_node(seq)
-      seq[0]
-    end
-
-    def rest_node(seq)
-      seq[1..-1]
-    end
-
-    def sequence_to_node(seq)
-      if seq.empty?
-        EMPTY_LIST
-      elsif last_node?(seq)
-        first_node(seq)
-      else
-        make_begin(seq)
-      end
-    end
-
-    def make_begin(seq)
-      node = Rubasteme::AST.instantiate(:ast_begin, nil)
-      seq.each{|e| node << e}
-      node
-    end
-
-    def cond_to_if(ast_node)
-      expand_clauses(ast_node.cond_clauses)
-    end
-
-    def expand_clauses(clauses)
-      if clauses.empty?
-        SCM_FALSE
-      else
-        first = clauses[0]
-        rest = clauses[1..-1]
-        if cond_else_clause(first)
-          if rest.empty?
-            sequence_to_node(first.sequence)
-          else
-            raise Error,
-                  "ELSE clause isn't last -- COND_TO_IF: got=%s" % clauses
-          end
-        else
-          make_if(first.test,
-                  sequence_to_node(first.sequence),
-                  expand_clauses(rest))
-        end
-      end
-    end
-
-    def cond_else_clause(clause_node)
-      test = clause_node.test
-      test.type == :ast_identifier && identifier(test) == "else"
-    end
-
-    def make_if(predicate, consequent, alternative)
-      node = Rubasteme::AST.instantiate(:ast_conditional, nil)
-      node.test = predicate
-      node.consequent = consequent
-      node.alternate = alternative if alternative
-      node
+    def eval_let(ast_node, env)
+      # <named let> is not supported yet.
+      formals = Rubasteme::AST.instantiate(:ast_formals, nil)
+      operands = []
+      ast_node.bindings.each { |bind_spec|
+        formals.add_identifier(bind_spec.identifier)
+        operands << bind_spec.expression
+      }
+      procedure = make_procedure(formals, ast_node.body, env)
+      apply(procedure, list_of_values(operands, env))
     end
 
     def list_of_values(ast_nodes, env)

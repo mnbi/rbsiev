@@ -126,7 +126,7 @@ module Rbsiev
     def eval_assignment(ast_node, env)
       var = identifier(ast_node.identifier)
       val = self.eval(ast_node.expression, env)
-      env.set_variable(var, val)
+      env.set_variable_value(var, val)
     end
 
     def eval_definition(ast_node, env)

@@ -56,7 +56,7 @@ module Rbsiev
   def self.setup_environment
     initial_env = Environment.the_empty_environment
     names = Environment.primitive_procedure_names
-    values = Environment.primitive_procedure_values(initial_env)
+    values = Environment.primitive_procedure_objects(initial_env)
     initial_env.extend(names, values)
   end
 

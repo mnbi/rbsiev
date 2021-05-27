@@ -38,7 +38,7 @@ module Rbsiev
       PRIMITIVE_PROCEDURE_NAME_MAP.keys
     end
 
-    def self.primitive_procedure_values(env)
+    def self.primitive_procedure_objects(env)
       # to preserve the order of names
       primitive_procedure_names.map { |name|
         sym = PRIMITIVE_PROCEDURE_NAME_MAP[name]

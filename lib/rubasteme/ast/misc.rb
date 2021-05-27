@@ -53,7 +53,7 @@ module Rubasteme
 
       # For AST::BeginNode.
 
-      def begin_action(ast_node)
+      def begin_actions(ast_node)
         check_type(:ast_begin, ast_node)
         ast_node.elements
       end
@@ -95,6 +95,23 @@ module Rubasteme
         end
       end
 
+      def let_to_combination(ast_node)
+        check_type(:ast_let, ast_node)
+
+        identifiers = []
+        operands = []
+
+        ast_node.bindings.each { |bind_spec|
+          identifiers << bind_spec.identifier
+          operands << bind_spec.expression
+        }
+
+        formals = make_formals(identifiers)
+        operator = make_lambda(formals, ast_node.body)
+
+        make_combination(operator, operands)
+      end
+
       def let_star_to_nested_lets(bindings, body)
         single_bindings = make_bindings([first_binding(bindings)])
         if last_binding?(bindings)
@@ -106,6 +123,13 @@ module Rubasteme
       end
 
       # Construcing functions.
+
+      def make_lambda(formals, body)
+        lambda_node = Rubasteme::AST.instantiate(:ast_lambda_expression, nil)
+        lambda_node.formals = formals
+        lambda_node.body = body
+        lambda_node
+      end
 
       def make_begin(nodes)
         begin_node = Rubasteme::AST.instantiate(:ast_begin, nil)
@@ -119,6 +143,24 @@ module Rubasteme
         if_node.consequent = consequent
         if_node.alternate = alternative if alternative
         if_node
+      end
+
+      def make_formals(identifiers)
+        formals_node = Rubasteme::AST.instantiate(:ast_formals, nil)
+        identifiers.each { |identifier_node|
+          check_type(:ast_identifier, identifier_node)
+          formals_node.add_identifier(identifier_node)
+        }
+        formals_node
+      end
+
+      def make_combination(operator, operands)
+        proc_call_node = Rubasteme::AST.instantiate(:ast_procedure_call, nil)
+        proc_call_node.operator = operator
+        operands.each { |node|
+          proc_call_node.add_operand(node)
+        }
+        proc_call_node
       end
 
       def make_let(bindings, body)

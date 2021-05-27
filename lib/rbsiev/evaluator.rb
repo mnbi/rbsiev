@@ -16,15 +16,11 @@ module Rbsiev
 
     def eval(ast_node, env)
       case ast_node.type
-      when :ast_program
-        result = nil
-        ast_node.each { |node|
-          result = self.eval(node, env)
-        }
-        result
-      when :ast_empty_list
+      when *EV_PROGRAM
+        eval_program(ast_node, env)
+      when *EV_EMPTY_LIST
         SCM_EMPTY_LIST
-      when :ast_boolean
+      when *EV_BOOLEAN
         eval_boolean(ast_node, env)
       when *EV_SELF_EVALUATING
         eval_self_evaluating(ast_node, env)
@@ -39,16 +35,14 @@ module Rbsiev
       when *EV_IF
         eval_if(ast_node, env)
       when *EV_LAMBDA
-        parameters = ast_node.formals
-        body = ast_node.body
-        make_procedure(parameters, body, env)
+        make_procedure(ast_node.formals, ast_node.body, env)
       when *EV_BEGIN
-        eval_sequence(begin_action(ast_node), env)
+        eval_sequence(begin_actions(ast_node), env)
       when *EV_COND
         eval_if(cond_to_if(ast_node), env)
-      when :ast_let
+      when *EV_LET
         eval_let(ast_node, env)
-      when :ast_let_star
+      when *EV_LET_STAR
         nested_lets = let_star_to_nested_lets(ast_node.bindings,
                                               ast_node.body)
         self.eval(nested_lets, env)
@@ -73,6 +67,9 @@ module Rbsiev
 
     private
 
+    EV_PROGRAM         = [:ast_program]
+    EV_EMPTY_LIST      = [:ast_empty_list]
+    EV_BOOLEAN         = [:ast_boolean]
     EV_SELF_EVALUATING = [:ast_string, :ast_number,]
     EV_VARIABLE        = [:ast_identifier]
     EV_QUOTED          = [:ast_quotation]
@@ -82,7 +79,17 @@ module Rbsiev
     EV_LAMBDA          = [:ast_lambda_expression]
     EV_BEGIN           = [:ast_begin]
     EV_COND            = [:ast_cond]
+    EV_LET             = [:ast_let]
+    EV_LET_STAR        = [:ast_let_star]
     EV_APPLICATION     = [:ast_procedure_call]
+
+    def eval_program(ast_node, env)
+      result = nil
+      ast_node.each { |node|
+        result = self.eval(node, env)
+      }
+      result
+    end
 
     def eval_boolean(ast_node, _)
       case ast_node.literal
@@ -146,15 +153,16 @@ module Rbsiev
     end
 
     def eval_let(ast_node, env)
-      # <named let> is not supported yet.
-      formals = Rubasteme::AST.instantiate(:ast_formals, nil)
-      operands = []
-      ast_node.bindings.each { |bind_spec|
-        formals.add_identifier(bind_spec.identifier)
-        operands << bind_spec.expression
-      }
-      procedure = make_procedure(formals, ast_node.body, env)
-      apply(procedure, list_of_values(operands, env))
+      combination = let_to_combination(ast_node)
+
+      # named let
+      if ast_node.identifier
+        name = identifier(ast_node.identifier)
+        procedure = self.eval(combination.operator, env)
+        env.define_variable(name, procedure)
+      end
+
+      self.eval(combination, env)
     end
 
     def list_of_values(ast_nodes, env)

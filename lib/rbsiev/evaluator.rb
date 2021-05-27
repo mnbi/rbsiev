@@ -15,43 +15,7 @@ module Rbsiev
     attr_accessor :verbose
 
     def eval(ast_node, env)
-      case ast_node.type
-      when *EV_PROGRAM
-        eval_program(ast_node, env)
-      when *EV_EMPTY_LIST
-        SCM_EMPTY_LIST
-      when *EV_BOOLEAN
-        eval_boolean(ast_node, env)
-      when *EV_SELF_EVALUATING
-        eval_self_evaluating(ast_node, env)
-      when *EV_VARIABLE
-        env.lookup_variable_value(identifier(ast_node))
-      when *EV_QUOTED
-        text_of_quotation(ast_node)
-      when *EV_ASSIGNMENT
-        eval_assignment(ast_node, env)
-      when *EV_DEFINITION
-        eval_definition(ast_node, env)
-      when *EV_IF
-        eval_if(ast_node, env)
-      when *EV_LAMBDA
-        make_procedure(ast_node.formals, ast_node.body, env)
-      when *EV_BEGIN
-        eval_sequence(begin_actions(ast_node), env)
-      when *EV_COND
-        eval_if(cond_to_if(ast_node), env)
-      when *EV_LET
-        eval_let(ast_node, env)
-      when *EV_LET_STAR
-        nested_lets = let_star_to_nested_lets(ast_node.bindings,
-                                              ast_node.body)
-        self.eval(nested_lets, env)
-      when *EV_APPLICATION
-        apply(self.eval(ast_node.operator, env),
-              list_of_values(ast_node.operands, env))
-      else
-        raise Error, "Unknown expression type -- EVAL: got=%s" % ast_node.type
-      end
+      self.send(func_map(ast_node.type), ast_node, env)
     end
 
     def apply(procedure, arguments)
@@ -67,28 +31,43 @@ module Rbsiev
 
     private
 
-    EV_PROGRAM         = [:ast_program]
-    EV_EMPTY_LIST      = [:ast_empty_list]
-    EV_BOOLEAN         = [:ast_boolean]
-    EV_SELF_EVALUATING = [:ast_string, :ast_number,]
-    EV_VARIABLE        = [:ast_identifier]
-    EV_QUOTED          = [:ast_quotation]
-    EV_ASSIGNMENT      = [:ast_assignment]
-    EV_DEFINITION      = [:ast_identifier_definition]
-    EV_IF              = [:ast_conditional]
-    EV_LAMBDA          = [:ast_lambda_expression]
-    EV_BEGIN           = [:ast_begin]
-    EV_COND            = [:ast_cond]
-    EV_LET             = [:ast_let]
-    EV_LET_STAR        = [:ast_let_star]
-    EV_APPLICATION     = [:ast_procedure_call]
+    EV_FUNCTIONS_MAP = {
+      ast_empty_list:        :eval_empty_list,
+      ast_boolean:           :eval_boolean,
+      ast_identifier:        :eval_variable,
+      ast_character:         :eval_self_evaluating,
+      ast_string:            :eval_self_evaluating,
+      ast_number:            :eval_self_evaluating,
+      ast_program:           :eval_program,
+      ast_quotation:         :eval_quoted,
+      ast_procedure_call:    :eval_combination,
+      ast_lambda_expression: :eval_lambda,
+      ast_conditional:       :eval_if,
+      ast_assignment:        :eval_assignment,
+      ast_identifier_definition: :eval_definition,
+      ast_cond:              :eval_cond,
+      ast_and:               nil,
+      ast_or:                nil,
+      ast_when:              nil,
+      ast_unless:            nil,
+      ast_let:               :eval_let,
+      ast_let_star:          :eval_let_star,
+      ast_letrec:            :eval_letrec,
+      ast_letrec_star:       :eval_letrec_star,
+      ast_begin:             :eval_sequence,
+      ast_do:                :eval_do,
+    }
 
-    def eval_program(ast_node, env)
-      result = nil
-      ast_node.each { |node|
-        result = self.eval(node, env)
-      }
-      result
+    def func_map(ast_node_type)
+      func = EV_FUNCTIONS_MAP[ast_node_type]
+      if func.nil?
+        raise Error, "Unknown expression type -- EVAL: got=%s" % ast_node_type
+      end
+      func
+    end
+
+    def eval_empty_list(_ast_node, _env)
+      SCM_EMPTY_LIST
     end
 
     def eval_boolean(ast_node, _)
@@ -102,7 +81,11 @@ module Rbsiev
       end
     end
 
-    def eval_self_evaluating(ast_node, _)
+    def eval_variable(ast_node, env)
+      env.lookup_variable_value(identifier(ast_node))
+    end
+
+    def eval_self_evaluating(ast_node, env)
       if ast_node.type == :ast_number and /([^\/]+)\/([^\/]+)/ === ast_node.literal
         md = Regexp.last_match
         Kernel.eval("Rational(#{md[1]}, #{md[2]})")
@@ -111,8 +94,33 @@ module Rbsiev
       end
     end
 
-    def text_of_quotation(ast_node)
-      "not implemented yet"
+    def eval_program(ast_node, env)
+      result = nil
+      ast_node.each { |node|
+        result = self.eval(node, env)
+      }
+      result
+    end
+
+    def eval_quoted(ast_node, _env)
+      text_of_quotation(ast_node)
+    end
+
+    def eval_combination(ast_node, env)
+      apply(self.eval(ast_node.operator, env),
+            list_of_values(ast_node.operands, env))
+    end
+
+    def eval_lambda(ast_node, env)
+      make_procedure(ast_node.formals, ast_node.body, env)
+    end
+
+    def eval_if(ast_node, env)
+      if true?(self.eval(ast_node.test, env))
+        self.eval(ast_node.consequent, env)
+      else
+        self.eval(ast_node.alternate, env) if ast_node.alternate?
+      end
     end
 
     def eval_assignment(ast_node, env)
@@ -127,29 +135,8 @@ module Rbsiev
       env.define_variable(var, val)
     end
 
-    def eval_if(ast_node, env)
-      if true?(self.eval(ast_node.test, env))
-        self.eval(ast_node.consequent, env)
-      else
-        self.eval(ast_node.alternate, env) if ast_node.alternate?
-      end
-    end
-
-    def true?(ast_boolean)
-      self.eval_boolean(ast_boolean, nil)
-    end
-
-    def make_procedure(parameters, body, env)
-      Procedure.make_procedure(parameters, body, env)
-    end
-
-    def eval_sequence(ast_nodes, env)
-      value = nil
-      if ast_nodes.instance_of?(Array) && ast_nodes.size > 0
-        value = self.eval(ast_nodes[0], env)
-        value = eval_sequence(ast_nodes[1..-1], env) if ast_nodes.size > 1
-      end
-      value
+    def eval_cond(ast_nodes, env)
+      eval_if(cond_to_if(ast_node), env)
     end
 
     def eval_let(ast_node, env)
@@ -163,6 +150,41 @@ module Rbsiev
       end
 
       self.eval(combination, env)
+    end
+
+    def eval_let_star(ast_node, env)
+      nested_lets = let_star_to_nested_lets(ast_node.bindings,
+                                            ast_node.body)
+      self.eval(nested_lets, env)
+    end
+
+    def eval_letrec(ast_nodes, env)
+      "not implemented yet"
+    end
+
+    def eval_letrec_star(ast_nodes, env)
+      "not implemented yet"
+    end
+
+    def eval_sequence(ast_nodes, env)
+      value = nil
+      if ast_nodes.instance_of?(Array) && ast_nodes.size > 0
+        value = self.eval(ast_nodes[0], env)
+        value = eval_sequence(ast_nodes[1..-1], env) if ast_nodes.size > 1
+      end
+      value
+    end
+
+    def text_of_quotation(ast_node)
+      "not implemented yet"
+    end
+
+    def true?(ast_boolean)
+      self.eval_boolean(ast_boolean, nil)
+    end
+
+    def make_procedure(parameters, body, env)
+      Procedure.make_procedure(parameters, body, env)
     end
 
     def list_of_values(ast_nodes, env)

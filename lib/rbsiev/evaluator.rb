@@ -158,8 +158,24 @@ module Rbsiev
       self.eval(nested_lets, env)
     end
 
-    def eval_letrec(ast_nodes, env)
-      "not implemented yet"
+    def eval_letrec(ast_node, env)
+      combination = let_to_combination(ast_node)
+
+      formals = combination.operator.formals
+      binds = {}
+      formals.each { |node|
+        binds[identifier(node)] = :ev_anassigned
+      }
+
+      ext_env = env.extend(binds.keys, binds.values)
+      operands = combination.operands.map{|e| self.eval(e, ext_env)}
+
+      target_frame = ext_env.first_frame
+      binds.keys.zip(operands).each { |parameter, arg|
+        Environment.set_variable_value(parameter, arg, target_frame)
+      }
+
+      self.eval(combination, ext_env)
     end
 
     def eval_letrec_star(ast_nodes, env)

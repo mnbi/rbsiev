@@ -96,7 +96,7 @@ module Rubasteme
       end
 
       def let_to_combination(ast_node)
-        check_type(:ast_let, ast_node)
+        check_types([:ast_let, :ast_letrec], ast_node)
 
         identifiers = []
         operands = []
@@ -188,6 +188,13 @@ module Rubasteme
 
       def check_type(ast_type, ast_node)
         if ast_node.type != ast_type
+          raise Error,
+                "wrong type node: expected=%s, got=%s" % [ast_type, ast_node.to_a.to_s]
+        end
+      end
+
+      def check_types(types, ast_node)
+        unless types.include?(ast_node.type)
           raise Error,
                 "wrong type node: expected=%s, got=%s" % [ast_type, ast_node.to_a.to_s]
         end

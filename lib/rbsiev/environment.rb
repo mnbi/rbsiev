@@ -6,7 +6,7 @@ module Rbsiev
     include Primitives
 
     def self.the_empty_environment
-      Environment.new
+      Environment.new(nil)
     end
 
     def self.make_frame(variables, values)
@@ -14,15 +14,23 @@ module Rbsiev
     end
 
     def self.frame_variables(frame)
-      frame.keys
+      frame && frame.keys
     end
 
     def self.frame_valeus(frame)
-      frame.values
+      frame && frame.values
+    end
+
+    def self.lookup_variable_value(var, frame)
+      frame && frame[var]
     end
 
     def self.add_binding_to_frame(var, val, frame)
-      frame.merge!({var => val})
+      frame && frame.merge!({var => val})
+    end
+
+    def self.set_variable_value(var, val, frame)
+      frame && frame[var] = val
     end
 
     PRIMITIVE_PROCEDURE_NAME_MAP = {
@@ -62,55 +70,70 @@ module Rbsiev
       }
     end
 
-    def initialize
-      @frames = []
+    def initialize(base_env)
+      @frame = nil
+      @enclosing_environment = base_env
     end
-    protected :initialize
 
-    attr_reader :frames
-
-    def enclosing_environment
-      @frames[1..-1]
-    end
+    attr_reader :enclosing_environment
 
     def first_frame
-      @frames[0]
+      @frame
     end
 
     def extend(vars, vals)
       if vars.size == vals.size
-        @frames.unshift(Environment.make_frame(vars, vals))
+        new_env = Environment.new(self)
+        new_env.set_frame!(Environment.make_frame(vars, vals))
+        new_env
       elsif var.size < vals.size
         raise Error, "Too many arguments supplied: %s => %s" % [vars, vals]
       else
         raise Error, "Too few arguments supplied: %s => %s" % [vars, vals]
       end
-      self
     end
 
     def lookup_variable_value(var)
       val = nil
-      @frames.each { |frame|
-        if frame.key?(var)
-          val = frame[var]
-          break
-        end
-      }
-      raise Error, "Unbound variable: got=%s" % (var || "nil") if val.nil?
+      env = self
+      while env
+        val = Environment.lookup_variable_value(var, env.first_frame)
+        break if val
+        env = env.enclosing_environment
+      end
+      raise Error, "Unbound variable: got=%s" % var if val.nil?
       val
     end
 
     def define_variable(var, val)
-      frame = first_frame || {}
-      Environment.add_binding_to_frame(var, val, frame)
+      if first_frame.nil?
+        set_frame!(Environment.make_frame([var], [val]))
+      else
+        Environment.add_binding_to_frame(var, val, first_frame)
+      end
       var
     end
 
     def set_variable_value(var, val)
-      frame = @frames.find{|f| f.key?(var)}
-      raise Error, "Unbound variable: got=%s" % var if frame.nil?
-      frame[var] = val
+      current = nil
+      env = self
+      while env
+        current = Environment.lookup_variable_value(var, env.first_frame)
+        if current
+          Environment.set_variable_value(var, val, env.first_frame)
+          break
+        else
+          env = env.enclosing_environment
+        end
+      end
+      raise Error, "Unbound variable: got=%s" % var if current.nil?
       val
+    end
+
+    protected
+
+    def set_frame!(frame)
+      @frame = frame
     end
 
   end                           # end of Environment

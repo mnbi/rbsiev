@@ -135,7 +135,7 @@ module Rbsiev
       env.define_variable(var, val)
     end
 
-    def eval_cond(ast_nodes, env)
+    def eval_cond(ast_node, env)
       eval_if(cond_to_if(ast_node), env)
     end
 
@@ -178,17 +178,29 @@ module Rbsiev
       self.eval(combination, ext_env)
     end
 
-    def eval_letrec_star(ast_nodes, env)
+    def eval_letrec_star(ast_node, env)
       "not implemented yet"
     end
 
-    def eval_sequence(ast_nodes, env)
+    def eval_sequence(ast_node, env)
       value = nil
-      if ast_nodes.instance_of?(Array) && ast_nodes.size > 0
-        value = self.eval(ast_nodes[0], env)
-        value = eval_sequence(ast_nodes[1..-1], env) if ast_nodes.size > 1
+
+      nodes = nil
+      if ast_node.instance_of?(Array)
+        nodes = ast_node
+      else                      # :ast_begin
+        nodes = ast_node.elements
       end
+
+      nodes.each{|node| value = self.eval(node, env)}
       value
+    end
+
+    EV_DO_LOOP_NAME = "ev_do_loop"
+
+    def eval_do(ast_node, env)
+      let_node = do_to_named_let(ast_node, EV_DO_LOOP_NAME)
+      self.eval(let_node, env)
     end
 
     def text_of_quotation(ast_node)

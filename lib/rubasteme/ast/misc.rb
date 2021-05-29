@@ -122,7 +122,47 @@ module Rubasteme
         end
       end
 
+      def do_to_named_let(ast_node, loop_identifier)
+        bind_specs = []
+        bind_specs_with_step = []
+        ast_node.iteration_bindings.each { |iter_spec|
+          spec = make_bind_spec(iter_spec.identifier, iter_spec.init)
+          if iter_spec.step
+            bind_specs_with_step << [spec, iter_spec.step]
+          else
+            bind_specs << spec
+          end
+        }
+
+        let_bindings = make_bindings(bind_specs_with_step.map{|e| e[0]})
+
+        test_and_do_result = ast_node.test_and_do_result
+
+        if_predicate = test_and_do_result.test
+        if_consequent = make_begin(rest_nodes(test_and_do_result))
+
+        sequence = []
+        sequence += ast_node.commands
+        sequence << make_combination(make_identifier(loop_identifier),
+                                     bind_specs_with_step.map{|e| e[1]})
+        if_alternative = make_begin(sequence)
+
+        let_body = make_if(if_predicate, if_consequent, if_alternative)
+        let_node = make_let(let_bindings, let_body)
+        let_node.identifier = make_identifier(loop_identifier)
+
+        if bind_specs.empty?
+          let_node
+        else
+          make_let(make_bindings(bind_specs), let_node)
+        end
+      end
+
       # Construcing functions.
+
+      def make_identifier(literal)
+        Rubasteme::AST::instantiate(:ast_identifier, literal)
+      end
 
       def make_lambda(formals, body)
         lambda_node = Rubasteme::AST.instantiate(:ast_lambda_expression, nil)
@@ -169,6 +209,13 @@ module Rubasteme
         let_node.bindings = bindings
         let_node.body = body.instance_of?(Array) ? body : [body]
         let_node
+      end
+
+      def make_bind_spec(identifier, expression)
+        spec_node = Rubasteme::AST.instantiate(:ast_bind_spec, nil)
+        spec_node.identifier = identifier
+        spec_node.expression = expression
+        spec_node
       end
 
       def make_bindings(bind_spec_nodes)

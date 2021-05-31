@@ -54,7 +54,7 @@ module Rbsiev
       ast_let_star:          :eval_let_star,
       ast_letrec:            :eval_letrec,
       ast_letrec_star:       :eval_letrec_star,
-      ast_begin:             :eval_sequence,
+      ast_begin:             :eval_begin,
       ast_do:                :eval_do,
     }
 
@@ -112,7 +112,8 @@ module Rbsiev
     end
 
     def eval_lambda(ast_node, env)
-      make_procedure(ast_node.formals, ast_node.body, env)
+      # TODO: process <internal_definitions>
+      make_procedure(ast_node.formals, ast_node.body.sequence, env)
     end
 
     def eval_if(ast_node, env)
@@ -153,6 +154,7 @@ module Rbsiev
     end
 
     def eval_let_star(ast_node, env)
+      # TODO: process <internal_definitions>
       nested_lets = let_star_to_nested_lets(ast_node.bindings,
                                             ast_node.body)
       self.eval(nested_lets, env)
@@ -182,17 +184,13 @@ module Rbsiev
       "not implemented yet"
     end
 
+    def eval_begin(ast_node, env)
+      eval_sequence(ast_node.sequence, env)
+    end
+
     def eval_sequence(ast_node, env)
       value = nil
-
-      nodes = nil
-      if ast_node.instance_of?(Array)
-        nodes = ast_node
-      else                      # :ast_begin
-        nodes = ast_node.elements
-      end
-
-      nodes.each{|node| value = self.eval(node, env)}
+      ast_node.each{|exp| value = self.eval(exp, env)}
       value
     end
 
@@ -211,8 +209,8 @@ module Rbsiev
       self.eval_boolean(ast_boolean, nil)
     end
 
-    def make_procedure(parameters, body, env)
-      Procedure.make_procedure(parameters, body, env)
+    def make_procedure(parameters, seq, env)
+      Procedure.make_procedure(parameters, seq, env)
     end
 
     def list_of_values(ast_nodes, env)

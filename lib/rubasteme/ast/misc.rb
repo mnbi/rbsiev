@@ -51,13 +51,6 @@ module Rubasteme
         end
       end
 
-      # For AST::BeginNode.
-
-      def begin_actions(ast_node)
-        check_type(:ast_begin, ast_node)
-        ast_node.elements
-      end
-
       # For AST::BindingsNode
 
       def last_binding?(ast_node)
@@ -84,14 +77,14 @@ module Rubasteme
         expand_clauses(ast_node.cond_clauses)
       end
 
-      def sequence_to_node(nodes)
-        check_list_type(nodes)
-        if nodes.empty?
+      def sequence_to_node(ast_node)
+        check_type(:ast_sequence, ast_node)
+        if ast_node.empty?
           EMPTY_LIST
-        elsif last_node?(nodes)
-          first_node(nodes)
+        elsif last_node?(ast_node)
+          first_node(ast_node)
         else
-          make_begin(nodes)
+          make_begin(ast_node)
         end
       end
 
@@ -117,8 +110,9 @@ module Rubasteme
         if last_binding?(bindings)
           make_let(single_bindings, body)
         else
-          make_let(single_bindings,
-                   let_star_to_nested_lets(rest_bindings(bindings), body))
+          seq = make_sequence([let_star_to_nested_lets(rest_bindings(bindings), body)])
+          new_body = make_body(nil, seq)
+          make_let(single_bindings, new_body)
         end
       end
 
@@ -147,14 +141,16 @@ module Rubasteme
                                      bind_specs_with_step.map{|e| e[1]})
         if_alternative = make_begin(sequence)
 
-        let_body = make_if(if_predicate, if_consequent, if_alternative)
+        if_node = make_if(if_predicate, if_consequent, if_alternative)
+        let_body = make_body(nil, make_sequence([if_node]))
         let_node = make_let(let_bindings, let_body)
         let_node.identifier = make_identifier(loop_identifier)
 
         if bind_specs.empty?
           let_node
         else
-          make_let(make_bindings(bind_specs), let_node)
+          let_body = make_body(nil, make_sequence([let_node]))
+          make_let(make_bindings(bind_specs), let_body)
         end
       end
 
@@ -165,6 +161,7 @@ module Rubasteme
       end
 
       def make_lambda(formals, body)
+        check_type(:ast_body, body)
         lambda_node = Rubasteme::AST.instantiate(:ast_lambda_expression, nil)
         lambda_node.formals = formals
         lambda_node.body = body
@@ -173,8 +170,38 @@ module Rubasteme
 
       def make_begin(nodes)
         begin_node = Rubasteme::AST.instantiate(:ast_begin, nil)
-        nodes.each{|node| begin_node << node}
+        case nodes
+        when Rubasteme::AST::SequenceNode
+          begin_node.sequence = nodes
+        when Array
+          begin_node.sequence = make_sequence(nodes)
+        else
+          raise Error, "wrong type argument: expected= Array or Rubasteme::AST::SequenceNode, got=%s" % nodes.class
+        end
         begin_node
+      end
+
+      def make_body(definitions, sequence)
+        body_node = Rubasteme::AST.instantiate(:ast_body, nil)
+
+        if definitions.nil?
+          definitions = Rubasteme::AST.instantiate(:ast_internal_definitions, nil)
+        end
+        if sequence.nil?
+          sequence = Rubasteme::ASt.instantiate(:ast_sequence, nil)
+        end
+
+        body_node.definitions = definitions
+        body_node.sequence = sequence
+
+        body_node
+      end
+
+      def make_sequence(nodes)
+        check_list_type(nodes)
+        seq_node = Rubasteme::AST.instantiate(:ast_sequence, nil)
+        nodes.each{|exp| seq_node.add_expression(exp)}
+        seq_node
       end
 
       def make_if(predicate, consequent, alternative)
@@ -205,9 +232,10 @@ module Rubasteme
 
       def make_let(bindings, body)
         check_type(:ast_bindings, bindings)
+        check_type(:ast_body, body)
         let_node = Rubasteme::AST.instantiate(:ast_let, nil)
         let_node.bindings = bindings
-        let_node.body = body.instance_of?(Array) ? body : [body]
+        let_node.body = body
         let_node
       end
 
@@ -270,8 +298,7 @@ module Rubasteme
       end
 
       def cond_else_clause?(clause_node)
-        test = clause_node.test
-        test.type == :ast_identifier && identifier(test) == "else"
+        clause_node.type == :ast_else_clause
       end
 
     end                         # end of Misc

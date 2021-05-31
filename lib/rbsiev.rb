@@ -2,7 +2,6 @@
 
 require "rbscmlex"
 require "rubasteme"
-require_relative "rubasteme/ast/missing"
 require_relative "rubasteme/ast/misc"
 
 module Rbsiev
@@ -47,7 +46,7 @@ module Rbsiev
     def version
       comp_vers = []
       comp_vers << Rbscmlex::Lexer.version
-      comp_vers << "(#{Rubasteme::Parser.version})"
+      comp_vers << Rubasteme::Parser.version
       comp_vers << Evaluator.version
       comp_vers.join("\n")
     end

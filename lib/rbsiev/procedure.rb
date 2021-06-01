@@ -10,7 +10,14 @@ module Rbsiev
       end
     end
 
-    attr_reader :parameters
+    def parameters(bare: false)
+      if bare
+        @parameters.map(&:literal)
+      else
+        @parameters
+      end
+    end
+
     attr_reader :body
     attr_reader :env
 

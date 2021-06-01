@@ -52,11 +52,23 @@ module Rbsiev
     end
   }
 
+  def self.evaluator
+    Evaluator.new
+  end
+
   def self.setup_environment
     initial_env = Environment.the_empty_environment
     names = Environment.primitive_procedure_names
     values = Environment.primitive_procedure_objects(initial_env)
     initial_env.extend(names, values)
+  end
+
+  def self.eval(scm_source)
+    lexer = Rbscmlex.lexer(scm_source)
+    parser = Rubasteme.parser
+    eva = evaluator
+    env = setup_environment
+    eva.eval(parser.parse(lexer), env)
   end
 
   def self.run(files:, verbose: false)

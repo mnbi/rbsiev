@@ -2,6 +2,20 @@
 
 module Rbsiev
 
+  PRIMITIVE_NAMES_MAP = {
+    # Some primitive procedure names in Scheme must be defined with
+    # different names in Ruby.
+    "+" => :add,
+    "-" => :subtract,
+    "*" => :mul,
+    "/" => :div,
+    "<" => :lt?,
+    "<=" => :le?,
+    ">" => :gt?,
+    ">=" => :ge?,
+    "=" => :same_value?,
+  }
+
   module Primitives
 
     require_relative "primitives/empty_list"
@@ -57,6 +71,17 @@ module Rbsiev
       scm_obj.kind_of?(Numeric) ? SCM_TRUE : SCM_FALSE
     end
 
+    # :stopdoc:
+
+    # Registers primitive procedure names into the name map, those
+    # names are identical in Scheme and Ruby.
+    instance_methods(true).each { |sym|
+      name = sym.to_s
+      unless PRIMITIVE_NAMES_MAP.key?(name)
+        PRIMITIVE_NAMES_MAP[name] = sym
+      end
+    }
+    # :startdoc:
   end
 
 end

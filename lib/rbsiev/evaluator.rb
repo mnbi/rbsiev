@@ -112,12 +112,36 @@ module Rbsiev
     end
 
     def eval_lambda(ast_node, env)
-      # TODO: process <internal_definitions>
-      make_procedure(ast_node.formals, ast_node.body.sequence, env)
+      parameters = ast_node.formals.map{|e| identifier(e)}
+      dummy_arguments = Array.new(parameters.size, :ev_unassigned)
+      extended_env = env.extend(parameters, dummy_arguments)
+
+      definitions = ast_node.body.definitions
+      unless definitions.empty?
+        names = []
+        procedures = []
+        definitions.each { |definition|
+          name = identifier(definition.identifier)
+          extended_env.define_variable(name, :ev_unassigned)
+
+          self.eval(definition, extended_env)
+
+          names << name
+          procedures << extended_env.lookup_variable_value(name)
+        }
+
+        target_frame = extended_env.first_frame
+        names.zip(procedures).each { |name, procedure|
+          target_frame.set(name, procedure)
+        }
+      end
+
+      make_procedure(ast_node.formals, ast_node.body.sequence, extended_env)
     end
 
     def eval_if(ast_node, env)
-      if true?(self.eval(ast_node.test, env))
+      test_result = self.eval(ast_node.test, env)
+      if true?(test_result)
         self.eval(ast_node.consequent, env)
       else
         self.eval(ast_node.alternate, env) if ast_node.alternate?
@@ -141,6 +165,7 @@ module Rbsiev
     end
 
     def eval_let(ast_node, env)
+      # TODO: process <internal_definitions>
       combination = let_to_combination(ast_node)
 
       # named let
@@ -161,6 +186,7 @@ module Rbsiev
     end
 
     def eval_letrec(ast_node, env)
+      # TODO: process <internal_definitions>
       combination = let_to_combination(ast_node)
 
       formals = combination.operator.formals
@@ -174,13 +200,14 @@ module Rbsiev
 
       target_frame = ext_env.first_frame
       binds.keys.zip(operands).each { |parameter, arg|
-        Environment.set_variable_value(parameter, arg, target_frame)
+        target_frame.set(parameter, arg)
       }
 
       self.eval(combination, ext_env)
     end
 
     def eval_letrec_star(ast_node, env)
+      # TODO: process <internal_definitions>
       "not implemented yet"
     end
 
@@ -205,8 +232,17 @@ module Rbsiev
       "not implemented yet"
     end
 
-    def true?(ast_boolean)
-      self.eval_boolean(ast_boolean, nil)
+    def true?(obj)
+      case obj
+      when Rubasteme::AST::BooleanNode
+        self.eval_boolean(obj, nil)
+      when FalseClass, NilClass
+        false
+      when TrueClass
+        true
+      else
+        true
+      end
     end
 
     def make_procedure(parameters, seq, env)
@@ -218,10 +254,11 @@ module Rbsiev
     end
 
     def apply_compound_procedure(procedure, arguments)
-      base_env = procedure.env
-      extended_env = base_env.extend(procedure_parameters(procedure),
-                                     arguments)
-      eval_sequence(procedure_body(procedure), extended_env)
+      env = procedure.env
+      procedure_parameters(procedure).zip(arguments).each { |var, val|
+        env.set_variable_value(var, val)
+      }
+      eval_sequence(procedure_body(procedure), env)
     end
 
     def procedure_parameters(procedure)

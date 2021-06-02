@@ -10,64 +10,33 @@ module Rbsiev
     end
 
     def self.make_frame(variables, values)
-      variables.zip(values).to_h
+      Frame.new(variables, values)
     end
 
-    def self.frame_variables(frame)
-      frame && frame.keys
-    end
+    class Frame
+      def initialize(variables = [], values = [])
+        @bindings = variables.zip(values).to_h
+      end
 
-    def self.frame_valeus(frame)
-      frame && frame.values
-    end
+      def variables
+        @bindings.keys
+      end
 
-    def self.lookup_variable_value(var, frame)
-      frame && frame[var]
-    end
+      def values
+        @bindings.values
+      end
 
-    def self.add_binding_to_frame(var, val, frame)
-      frame && frame.merge!({var => val})
-    end
+      def lookup(var)
+        @bindings[var]
+      end
 
-    def self.set_variable_value(var, val, frame)
-      frame && frame[var] = val
-    end
+      def add_binding(var, val)
+        @bindings.merge!({var => val})
+      end
 
-    PRIMITIVE_PROCEDURE_NAME_MAP = {
-      "cons" => :cons,
-      "list" => :list,
-      "pair?" => :pair?,
-      "list?" => :list?,
-      "car" => :car,
-      "cdr" => :cdr,
-      "display" => :display,
-      "write" => :write,
-      "append" => :append,
-      "number?" => :number?,
-      "zero?" => :zero?,
-      "+" => :add,
-      "-" => :subtract,
-      "*" => :mul,
-      "/" => :div,
-      "scm_true" => :scm_true,
-      "scm_false" => :scm_false,
-      "<" => :lt?,
-      "<=" => :le?,
-      ">" => :gt?,
-      ">=" => :ge?,
-      "=" => :same_value?,
-    }
-
-    def self.primitive_procedure_names
-      PRIMITIVE_PROCEDURE_NAME_MAP.keys
-    end
-
-    def self.primitive_procedure_objects(env)
-      # to preserve the order of names
-      primitive_procedure_names.map { |name|
-        sym = PRIMITIVE_PROCEDURE_NAME_MAP[name]
-        Procedure.make_procedure(nil, sym, env)
-      }
+      def set(var, value)
+        @bindings[var] = value
+      end
     end
 
     def initialize(base_env)
@@ -97,7 +66,7 @@ module Rbsiev
       val = nil
       env = self
       while env
-        val = Environment.lookup_variable_value(var, env.first_frame)
+        val = env.first_frame && env.first_frame.lookup(var)
         break if val
         env = env.enclosing_environment
       end
@@ -109,7 +78,7 @@ module Rbsiev
       if first_frame.nil?
         set_frame!(Environment.make_frame([var], [val]))
       else
-        Environment.add_binding_to_frame(var, val, first_frame)
+        first_frame.add_binding(var, val)
       end
       var
     end
@@ -118,9 +87,9 @@ module Rbsiev
       current = nil
       env = self
       while env
-        current = Environment.lookup_variable_value(var, env.first_frame)
+        current = env.first_frame && env.first_frame.lookup(var)
         if current
-          Environment.set_variable_value(var, val, env.first_frame)
+          env.first_frame.set(var, val)
           break
         else
           env = env.enclosing_environment

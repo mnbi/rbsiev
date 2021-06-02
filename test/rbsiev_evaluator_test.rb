@@ -115,7 +115,7 @@ class RbsievEvaluatorTest < Minitest::Test
     assert_equal (3 * (3 + 5)), result
   end
 
-  def test_it_can_eval_retrec
+  def test_it_can_eval_letrec
     source = "(letrec ((fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 6))"
     result = scm_eval(source)
     assert_equal 720, result

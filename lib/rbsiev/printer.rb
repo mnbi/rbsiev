@@ -9,7 +9,8 @@ module Rbsiev
     attr_accessor :verbose
 
     def print(value)
-      pp value
+#      pp value
+      puts value
     end
 
   end

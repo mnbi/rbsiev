@@ -19,8 +19,8 @@ module Rbsiev
   SCM_FALSE = Rubasteme::AST.instantiate(:ast_boolean, "#f")
 
   Components = Struct.new(:parser, :evaluator, :printer, :env) {
-    def parse(lexer)
-      parser.parse(lexer)
+    def parse(source)
+      parser.parse(Rbscmlex.lexer(source))
     end
 
     def eval(ast_node)
@@ -32,9 +32,7 @@ module Rbsiev
     end
 
     def exec(source)
-      lexer = Rbscmlex::Lexer.new(source)
-      result_value = self.eval(parse(lexer))
-      self.print(result_value)
+      self.print(self.eval(parse(source)))
     end
 
     def load(file)
@@ -56,10 +54,18 @@ module Rbsiev
     Evaluator.new
   end
 
+  def self.printer
+    Printer.new
+  end
+
   def self.setup_environment
     initial_env = Environment.the_empty_environment
-    names = Environment.primitive_procedure_names
-    values = Environment.primitive_procedure_objects(initial_env)
+    names = []
+    values = []
+    PRIMITIVE_NAMES_MAP.each { |name, sym|
+      names << name
+      values << Procedure.make_procedure(nil, sym, initial_env)
+    }
     initial_env.extend(names, values)
   end
 

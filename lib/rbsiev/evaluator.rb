@@ -166,7 +166,7 @@ module Rbsiev
       formals = combination.operator.formals
       binds = {}
       formals.each { |node|
-        binds[identifier(node)] = :ev_anassigned
+        binds[identifier(node)] = :ev_unassigned
       }
 
       ext_env = env.extend(binds.keys, binds.values)

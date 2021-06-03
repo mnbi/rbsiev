@@ -3,6 +3,7 @@
 require "rbscmlex"
 require "rubasteme"
 require_relative "rubasteme/ast/misc"
+require_relative "scmo/object"
 
 module Rbsiev
   require_relative "rbsiev/version"
@@ -14,9 +15,13 @@ module Rbsiev
   require_relative "rbsiev/printer"
   require_relative "rbsiev/repl"
 
-  SCM_EMPTY_LIST = Primitives::EmptyList::SCM_EMPTY_LIST
-  SCM_TRUE = Rubasteme::AST.instantiate(:ast_boolean, "#t")
-  SCM_FALSE = Rubasteme::AST.instantiate(:ast_boolean, "#f")
+  SCM_EMPTY_LIST = Scmo::EMPTY_LIST
+  SCM_TRUE = Scmo::TRUE
+  SCM_FALSE = Scmo::FALSE
+
+  def self.scheme_object?(obj)
+    Scmo.scheme_object?(obj)
+  end
 
   Components = Struct.new(:parser, :evaluator, :printer, :env) {
     def parse(source)

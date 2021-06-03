@@ -27,7 +27,7 @@ module Rbsiev
     include Arithmetic
 
     def cons(scm_obj1, scm_obj2)
-      [obj1, obj2]
+      [scm_obj1, scm_obj2]
     end
 
     def pair?(scm_obj)

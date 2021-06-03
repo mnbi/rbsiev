@@ -5,10 +5,8 @@ module Rbsiev
 
     module EmptyList
 
-      SCM_EMPTY_LIST = []
-
       def null?(scm_obj)
-        scm_obj.instance_of?(Array) && scm_obj.empty?
+        scm_obj.kind_of?(Scmo::Object) && scm_obj.null?
       end
 
     end

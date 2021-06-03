@@ -234,6 +234,8 @@ module Rbsiev
 
     def true?(obj)
       case obj
+      when Scmo::Object
+        obj.to_rb == false ? false : true
       when Rubasteme::AST::BooleanNode
         self.eval_boolean(obj, nil)
       when FalseClass, NilClass

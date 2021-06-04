@@ -165,14 +165,16 @@ module Rbsiev
     end
 
     def eval_let(ast_node, env)
-      # TODO: process <internal_definitions>
       combination = let_to_combination(ast_node)
 
       # named let
       if ast_node.identifier
         name = identifier(ast_node.identifier)
-        procedure = self.eval(combination.operator, env)
-        env.define_variable(name, procedure)
+        extended_env = env.extend([name], [:ev_unassigned])
+        procedure = self.eval(combination.operator, extended_env)
+        extended_env.set_variable_value(name, procedure)
+        env = extended_env
+        combination.operator = make_identifier(name)
       end
 
       self.eval(combination, env)

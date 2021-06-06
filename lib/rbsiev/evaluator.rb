@@ -48,8 +48,8 @@ module Rbsiev
       ast_cond:              :eval_cond,
       ast_and:               :eval_and,
       ast_or:                :eval_or,
-      ast_when:              nil,
-      ast_unless:            nil,
+      ast_when:              :eval_when,
+      ast_unless:            :eval_unless,
       ast_let:               :eval_let,
       ast_let_star:          :eval_let_star,
       ast_letrec:            :eval_letrec,
@@ -195,6 +195,20 @@ module Rbsiev
             self.eval_or(rest_nodes(ast_node), env)
           end
         end
+      end
+    end
+
+    def eval_when(ast_node, env)
+      test_result = self.eval(ast_node.test, env)
+      if true?(test_result)
+        self.eval_sequence(ast_node.sequence, env)
+      end
+    end
+
+    def eval_unless(ast_node, env)
+      test_result = self.eval(ast_node.test, env)
+      unless true?(test_result)
+        self.eval_sequence(ast_node.sequence, env)
       end
     end
 

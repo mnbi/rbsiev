@@ -46,8 +46,8 @@ module Rbsiev
       ast_assignment:        :eval_assignment,
       ast_identifier_definition: :eval_definition,
       ast_cond:              :eval_cond,
-      ast_and:               nil,
-      ast_or:                nil,
+      ast_and:               :eval_and,
+      ast_or:                :eval_or,
       ast_when:              nil,
       ast_unless:            nil,
       ast_let:               :eval_let,
@@ -164,6 +164,40 @@ module Rbsiev
       eval_if(cond_to_if(ast_node), env)
     end
 
+    def eval_and(ast_node, env)
+      if empty_node?(ast_node)
+        SCM_TRUE
+      else
+        result = self.eval(first_node(ast_node), env)
+        if true?(result)
+          if last_node?(ast_node)
+            result
+          else
+            self.eval_and(rest_nodes(ast_node), env)
+          end
+        else
+          SCM_FALSE
+        end
+      end
+    end
+
+    def eval_or(ast_node, env)
+      if empty_node?(ast_node)
+        SCM_FALSE
+      else
+        result = self.eval(first_node(ast_node), env)
+        if true?(result)
+          result
+        else
+          if last_node?(ast_node)
+            SCM_FALSE
+          else
+            self.eval_or(rest_nodes(ast_node), env)
+          end
+        end
+      end
+    end
+
     def eval_let(ast_node, env)
       combination = let_to_combination(ast_node)
 
@@ -181,14 +215,12 @@ module Rbsiev
     end
 
     def eval_let_star(ast_node, env)
-      # TODO: process <internal_definitions>
       nested_lets = let_star_to_nested_lets(ast_node.bindings,
                                             ast_node.body)
       self.eval(nested_lets, env)
     end
 
     def eval_letrec(ast_node, env)
-      # TODO: process <internal_definitions>
       combination = let_to_combination(ast_node)
 
       formals = combination.operator.formals

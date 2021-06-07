@@ -237,17 +237,13 @@ module Rbsiev
     def eval_letrec(ast_node, env)
       combination = let_to_combination(ast_node)
 
-      formals = combination.operator.formals
-      binds = {}
-      formals.each { |node|
-        binds[identifier(node)] = :ev_unassigned
-      }
-
-      ext_env = env.extend(binds.keys, binds.values)
-      operands = combination.operands.map{|e| self.eval(e, ext_env)}
+      params = parameters(combination.operator.formals)
+      ext_env = env.extend(params, Array.new(params.size, :ev_unassigned))
 
       target_frame = ext_env.first_frame
-      binds.keys.zip(operands).each { |parameter, arg|
+
+      operands = combination.operands.map{|e| self.eval(e, ext_env)}
+      params.zip(operands).each { |parameter, arg|
         target_frame.set(parameter, arg)
       }
 
@@ -255,8 +251,19 @@ module Rbsiev
     end
 
     def eval_letrec_star(ast_node, env)
-      # TODO: process <internal_definitions>
-      "not implemented yet"
+      combination = let_to_combination(ast_node)
+
+      params = parameters(combination.operator.formals)
+      ext_env = env.extend(params, Array.new(params.size, :ev_unassigned))
+
+      target_frame = ext_env.first_frame
+
+      params.zip(combination.operands).each { |parameter, operand|
+        arg = self.eval(operand, ext_env)
+        target_frame.set(parameter, arg)
+      }
+
+      self.eval(combination, ext_env)
     end
 
     def eval_begin(ast_node, env)

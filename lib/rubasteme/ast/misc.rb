@@ -51,6 +51,13 @@ module Rubasteme
         end
       end
 
+      # for AST::FormalsNode
+
+      def parameters(ast_node)
+        check_type(:ast_formals, ast_node)
+        ast_node.map{|e| identifier(e)}
+      end
+
       # For AST::BindingsNode
 
       def last_binding?(ast_node)
@@ -89,7 +96,7 @@ module Rubasteme
       end
 
       def let_to_combination(ast_node)
-        check_types([:ast_let, :ast_letrec], ast_node)
+        check_types([:ast_let, :ast_letrec, :ast_letrec_star], ast_node)
 
         identifiers = []
         operands = []

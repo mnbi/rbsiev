@@ -9,6 +9,7 @@ module Rbsiev
     "-" => :subtract,
     "*" => :mul,
     "/" => :div,
+    "%" => :mod,
     "<" => :lt?,
     "<=" => :le?,
     ">" => :gt?,

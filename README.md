@@ -10,11 +10,62 @@ It is intended to be a part of Scheme implementation written in Ruby.
 
 ## Installation
 
-(not yet supported)
+Execute:
+
+    $ gem install rbsiev
 
 ## Usage
 
-(not yet documented)
+Run the simple REPL as:
+
+    $ rbsiev
+
+Then, you can input Scheme program.
+
+## Supported Syntax
+
+In 0.1.0, the evaluator mostly corresponds to the one in SICP 4.1.1 -
+4.1.6.
+
+See the [wiki page](https://github.com/mnbi/rbsiev/wiki/実装の進捗)
+for more information about the progress of implementing.
+
+### Literals
+
+- boolean value (`#f` and `#t`),
+- an empty list (`()`),
+- a string enclosing with double-quotations, such `"hoge"`
+- numbers (integer, real, rational, and complex)
+
+### Primitive procedures
+
+- arithmetic operators (`+`, `-`, `*`, `/`, `%`),
+- comparison operators (`=`, `<`, `>`, `<=`, `>=`)
+- `cons`, `car`, `cdr`
+- `null?`, `pair?`, `list?`, `number?`
+- `list`, `append`
+- `write`, `display`
+
+### Syntax to be evaluated
+
+- lambda expression
+  - such `(lambda (n) (+ n 1))`
+- procedure application
+  - such `(foo 1)`
+- conditional expression
+  - `if`, `cond`, `when`, `unless`
+- logical test
+  - `and`, `or`
+- assignment
+  - `set!`
+- definition
+  - `define`
+- sequence
+  - `begin`
+- local bindings
+  - `let`, `let*`, `letrec`, `letrec*`
+- loop
+  - `do`
 
 ## Related projects
 

@@ -97,6 +97,30 @@ class RbsievEvaluatorTest < Minitest::Test
     assert_equal "nega", result
   end
 
+  def test_it_can_eval_and
+    source = "(and 1 2 3)"
+    result = scm_eval(source)
+    assert_equal 3, result
+  end
+
+  def test_it_can_eval_or
+    source = "(or #f #false (= 1 2) 4)"
+    result = scm_eval(source)
+    assert_equal 4, result
+  end
+
+  def test_it_can_eval_when
+    source = "(when (= 0 0) \"zero\")"
+    result = scm_eval(source)
+    assert_equal "zero", result
+  end
+
+  def test_it_can_eval_unless
+    source = "(unless (= 1 0) \"not zero\")"
+    result = scm_eval(source)
+    assert_equal "not zero", result
+  end
+
   def test_it_can_eval_let
     source = "(let ((x 1) (y 2)) (+ x y))"
     result = scm_eval(source)
@@ -119,6 +143,12 @@ class RbsievEvaluatorTest < Minitest::Test
     source = "(letrec ((fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 6))"
     result = scm_eval(source)
     assert_equal 720, result
+  end
+
+  def test_it_can_eval_letrec_star
+    source = "(letrec* ((foo (lambda (x) (+ x 1))) (y (foo 3))) (* y 2))"
+    result = scm_eval(source)
+    assert_equal 8, result
   end
 
   def test_it_can_eval_begin

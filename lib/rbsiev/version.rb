@@ -2,5 +2,5 @@
 
 module Rbsiev
   VERSION = "0.1.0"
-  RELEASE = "2021-05-21"
+  RELEASE = "2021-06-08"
 end

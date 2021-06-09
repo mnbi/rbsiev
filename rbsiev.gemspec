@@ -27,5 +27,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "rbscmlex", ">= 0.1.3"
-  spec.add_dependency "rubasteme", ">= 0.1.4"
+  spec.add_dependency "rubasteme", ">= 0.1.7"
 end

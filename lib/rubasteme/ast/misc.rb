@@ -140,7 +140,7 @@ module Rubasteme
         test_and_do_result = ast_node.test_and_do_result
 
         if_predicate = test_and_do_result.test
-        if_consequent = make_begin(rest_nodes(test_and_do_result))
+        if_consequent = make_begin(test_and_do_result.sequence)
 
         sequence = []
         sequence += ast_node.commands
